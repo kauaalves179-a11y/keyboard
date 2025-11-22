@@ -239,6 +239,9 @@
   let recordedChunks = [];
   let isRecording = false;
 
+  // Limite de resolução para celular não travar
+  const MAX_WIDTH = 640; 
+
   function iniciarExperiencia() {
     video.muted = true; 
     video.play().then(() => {
@@ -247,7 +250,14 @@
       controlsArea.style.display = 'flex'; 
       isPlaying = true;
       ajustarTamanhoCanvas();
-      loopProcessamento();
+      
+      // Tenta usar API moderna de vídeo para evitar pulos
+      if ('requestVideoFrameCallback' in video) {
+        video.requestVideoFrameCallback(processarFrameVideo);
+      } else {
+        requestAnimationFrame(loopProcessamentoLegacy);
+      }
+
     }).catch(error => {
       console.error(error);
       alert("Erro ao iniciar. Verifique se o arquivo 'video.mp4' está na pasta.");
@@ -256,10 +266,22 @@
 
   function ajustarTamanhoCanvas() {
      if (video.videoWidth > 0) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      tempCanvas.width = video.videoWidth;
-      tempCanvas.height = video.videoHeight;
+      // Calcula proporção
+      const ratio = video.videoHeight / video.videoWidth;
+      
+      // Limita largura para 640px no máximo (otimização iPhone)
+      let finalWidth = video.videoWidth;
+      if (finalWidth > MAX_WIDTH) {
+        finalWidth = MAX_WIDTH;
+      }
+      let finalHeight = Math.floor(finalWidth * ratio);
+
+      if (canvas.width !== finalWidth) {
+          canvas.width = finalWidth;
+          canvas.height = finalHeight;
+          tempCanvas.width = finalWidth;
+          tempCanvas.height = finalHeight;
+      }
     }
   }
 
@@ -283,7 +305,7 @@
               if (canvas.height > 0) {
                   photoY = Math.floor(canvas.height * 0.6) - (userImage.height * 0.2); 
               } else {
-                  photoY = 250;
+                  photoY = 100;
               }
 
               posXSlider.value = photoX;
@@ -296,39 +318,63 @@
     }
   });
 
-  function loopProcessamento() {
-    if (!isPlaying) return;
-    if (video.paused && !video.ended) video.play();
-    if (canvas.width === 0) ajustarTamanhoCanvas();
+  // --- PROCESSO OTIMIZADO PARA IPHONE (requestVideoFrameCallback) ---
+  function processarFrameVideo(now, metadata) {
+      if (!isPlaying) return;
+      
+      renderizarFrame();
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (hasPhoto) {
-        let scaledWidth = userImage.width * photoScale;
-        let scaledHeight = userImage.height * photoScale;
-        ctx.drawImage(userImage, photoX, photoY, scaledWidth, scaledHeight);
-    }
-
-    tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-    let frame = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-    let l = frame.data.length / 4;
-
-    for (let i = 0; i < l; i++) {
-      let r = frame.data[i * 4 + 0];
-      let g = frame.data[i * 4 + 1];
-      let b = frame.data[i * 4 + 2];
-
-      if (g > 90 && g > r * 1.4 && g > b * 1.4) {
-        frame.data[i * 4 + 3] = 0; 
-      }
-    }
-    tempCtx.putImageData(frame, 0, 0);
-    ctx.drawImage(tempCanvas, 0, 0);
-
-    requestAnimationFrame(loopProcessamento);
+      // Agenda o próximo frame sincronizado com o vídeo
+      video.requestVideoFrameCallback(processarFrameVideo);
   }
 
-  // --- DOWNLOAD COM TRATAMENTO DE MP4 PARA IPHONE ---
+  // --- PROCESSO LEGADO (Android/PC Antigo) ---
+  function loopProcessamentoLegacy() {
+      if (!isPlaying) return;
+      
+      if (video.paused && !video.ended) video.play();
+      
+      renderizarFrame();
+      
+      requestAnimationFrame(loopProcessamentoLegacy);
+  }
+
+  function renderizarFrame() {
+      if (canvas.width === 0) ajustarTamanhoCanvas();
+
+      // 1. Limpa o canvas principal
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 2. Desenha Foto
+      if (hasPhoto) {
+          let scaledWidth = userImage.width * photoScale;
+          let scaledHeight = userImage.height * photoScale;
+          ctx.drawImage(userImage, photoX, photoY, scaledWidth, scaledHeight);
+      }
+
+      // 3. Processa o vídeo (Redimensionado para performance)
+      // Desenha o vídeo no tamanho limitado (tempCanvas)
+      tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+      
+      let frame = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+      let l = frame.data.length / 4;
+
+      for (let i = 0; i < l; i++) {
+        let r = frame.data[i * 4 + 0];
+        let g = frame.data[i * 4 + 1];
+        let b = frame.data[i * 4 + 2];
+
+        if (g > 90 && g > r * 1.4 && g > b * 1.4) {
+          frame.data[i * 4 + 3] = 0; 
+        }
+      }
+      tempCtx.putImageData(frame, 0, 0);
+
+      // 4. Desenha o vídeo por cima
+      ctx.drawImage(tempCanvas, 0, 0);
+  }
+
+  // --- DOWNLOAD ---
   btnDownload.addEventListener('click', function() {
       if(isRecording) return;
       isRecording = true;
@@ -338,17 +384,14 @@
       recordedChunks = [];
       const stream = canvas.captureStream(30);
       
-      // Tenta codecs específicos para enganar o iPhone e fazê-lo aceitar
+      // Tenta MP4 (iPhone) depois WebM
       let mimeType = 'video/webm';
       let extension = 'webm';
 
-      // Verifica se suporta MP4 com codec H.264 (padrão Apple)
       if (MediaRecorder.isTypeSupported('video/mp4; codecs="avc1.424028, mp4a.40.2"')) {
           mimeType = 'video/mp4; codecs="avc1.424028, mp4a.40.2"';
           extension = 'mp4';
-      } 
-      // Fallback para MP4 genérico
-      else if (MediaRecorder.isTypeSupported('video/mp4')) {
+      } else if (MediaRecorder.isTypeSupported('video/mp4')) {
           mimeType = 'video/mp4';
           extension = 'mp4';
       }
@@ -356,13 +399,12 @@
       try {
         mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
       } catch (e) {
-        // Se falhar o MP4, volta pro WebM garantido
-        console.log("MP4 falhou, tentando WebM");
+        console.log("Tentando fallback WebM");
         try {
             mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
             extension = 'webm';
         } catch(err) {
-            alert("Navegador não suporta gravação.");
+            alert("Erro na gravação.");
             btnDownload.textContent = "Erro";
             return;
         }
@@ -373,7 +415,6 @@
       };
 
       mediaRecorder.onstop = function() {
-        // Cria o arquivo final com a extensão correta
         const blob = new Blob(recordedChunks, { type: mimeType.split(';')[0] });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
