@@ -64,7 +64,7 @@
     width: 100%;
     max-width: 380px;
     box-sizing: border-box;
-    text-transform: lowercase; /* Deixa tudo minúsculo */
+    text-transform: lowercase;
   }
   .btn-estilo:hover:not(:disabled) {
     background: #fff;
@@ -88,7 +88,7 @@
     max-width: 380px;
   }
 
-  /* Painel de Ajustes (Sliders) */
+  /* Painel de Ajustes */
   .adjust-controls {
     display: none; 
     flex-direction: column;
@@ -177,19 +177,16 @@
         
         <div class="slider-group">
             <label>tamanho</label>
-            <!-- Permite ficar bem pequeno (0.05) até grande (4x) -->
             <input type="range" id="scaleSlider" min="0.05" max="4" step="0.05" value="1">
         </div>
 
         <div class="slider-group">
             <label>esquerda / direita</label>
-            <!-- Range gigante -->
             <input type="range" id="posXSlider" min="-1000" max="1000" step="5" value="0">
         </div>
 
         <div class="slider-group">
             <label>cima / baixo</label>
-            <!-- Range gigante -->
             <input type="range" id="posYSlider" min="-1000" max="1000" step="5" value="0">
         </div>
     </div>
@@ -234,7 +231,6 @@
   let hasPhoto = false;
   let isPlaying = false;
   
-  // Valores iniciais (serão sobrescritos ao carregar foto)
   let photoScale = 1;
   let photoX = 0;
   let photoY = 0;
@@ -282,21 +278,14 @@
               btnDownload.disabled = false;
               adjustControls.style.display = 'flex';
               
-              // --- AUTO-POSICIONAMENTO ---
-              // Aqui definimos onde a foto começa
-              
-              // X = 0 (Totalmente na esquerda)
+              // POSICIONAMENTO AUTOMÁTICO
               photoX = 0; 
-              
-              // Y = Tenta jogar para baixo (aprox. 60% da altura do canvas se disponível)
-              // Se o canvas já tiver altura, usa ela. Senão, chuta 250px pra baixo.
               if (canvas.height > 0) {
                   photoY = Math.floor(canvas.height * 0.6) - (userImage.height * 0.2); 
               } else {
                   photoY = 250;
               }
 
-              // Atualiza os sliders visuais para bater com a posição real
               posXSlider.value = photoX;
               posYSlider.value = photoY;
               scaleSlider.value = 1;
@@ -309,7 +298,6 @@
 
   function loopProcessamento() {
     if (!isPlaying) return;
-    
     if (video.paused && !video.ended) video.play();
     if (canvas.width === 0) ajustarTamanhoCanvas();
 
@@ -330,18 +318,17 @@
       let g = frame.data[i * 4 + 1];
       let b = frame.data[i * 4 + 2];
 
-      // Lógica do Chroma Key (Verde)
       if (g > 90 && g > r * 1.4 && g > b * 1.4) {
         frame.data[i * 4 + 3] = 0; 
       }
     }
     tempCtx.putImageData(frame, 0, 0);
-
     ctx.drawImage(tempCanvas, 0, 0);
 
     requestAnimationFrame(loopProcessamento);
   }
 
+  // --- DOWNLOAD COM TRATAMENTO DE MP4 PARA IPHONE ---
   btnDownload.addEventListener('click', function() {
       if(isRecording) return;
       isRecording = true;
@@ -351,17 +338,34 @@
       recordedChunks = [];
       const stream = canvas.captureStream(30);
       
-      let options = { mimeType: 'video/webm;codecs=vp9' };
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options = { mimeType: 'video/webm' };
+      // Tenta codecs específicos para enganar o iPhone e fazê-lo aceitar
+      let mimeType = 'video/webm';
+      let extension = 'webm';
+
+      // Verifica se suporta MP4 com codec H.264 (padrão Apple)
+      if (MediaRecorder.isTypeSupported('video/mp4; codecs="avc1.424028, mp4a.40.2"')) {
+          mimeType = 'video/mp4; codecs="avc1.424028, mp4a.40.2"';
+          extension = 'mp4';
+      } 
+      // Fallback para MP4 genérico
+      else if (MediaRecorder.isTypeSupported('video/mp4')) {
+          mimeType = 'video/mp4';
+          extension = 'mp4';
       }
       
       try {
-        mediaRecorder = new MediaRecorder(stream, options);
+        mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
       } catch (e) {
-        alert("Seu navegador não suporta gravação.");
-        btnDownload.textContent = "Erro na gravação";
-        return;
+        // Se falhar o MP4, volta pro WebM garantido
+        console.log("MP4 falhou, tentando WebM");
+        try {
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            extension = 'webm';
+        } catch(err) {
+            alert("Navegador não suporta gravação.");
+            btnDownload.textContent = "Erro";
+            return;
+        }
       }
 
       mediaRecorder.ondataavailable = function(e) {
@@ -369,13 +373,14 @@
       };
 
       mediaRecorder.onstop = function() {
-        const blob = new Blob(recordedChunks, { type: "video/webm" });
+        // Cria o arquivo final com a extensão correta
+        const blob = new Blob(recordedChunks, { type: mimeType.split(';')[0] });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         document.body.appendChild(a);
         a.style = "display: none";
         a.href = url;
-        a.download = "keyboard-challenge-clip.webm";
+        a.download = `keyboard-challenge-clip.${extension}`;
         a.click();
         window.URL.revokeObjectURL(url);
         
