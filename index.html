@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Keyboard Challenge</title>
 
+<!-- Fonte Special Elite do Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
@@ -29,7 +30,7 @@
     line-height: 1.3;
   }
 
-  /* Área do Vídeo Pequena */
+  /* Área do Vídeo */
   .canvas-container {
     position: relative;
     margin: 5px auto;
@@ -48,7 +49,7 @@
     display: none; 
   }
 
-  /* Estilo padrão dos botões */
+  /* Botões Estilizados */
   .btn-estilo {
     padding: 12px 15px;
     font-size: 16px;
@@ -60,9 +61,10 @@
     margin: 5px 0;
     transition: 0.2s;
     display: inline-block;
-    width: 100%; /* Botões largos no celular */
+    width: 100%;
     max-width: 380px;
     box-sizing: border-box;
+    text-transform: lowercase; /* Deixa tudo minúsculo */
   }
   .btn-estilo:hover:not(:disabled) {
     background: #fff;
@@ -73,9 +75,9 @@
     cursor: not-allowed;
   }
 
-  #btnStart { font-size: 20px; margin: 20px 0; }
+  #btnStart { font-size: 20px; margin: 20px 0; text-transform: uppercase; }
 
-  /* Área de controles geral */
+  /* Área de Controles */
   .controls-area {
     margin: 10px 0;
     display: none; 
@@ -86,28 +88,45 @@
     max-width: 380px;
   }
 
-  /* Novos controles de ajuste (Sliders) */
+  /* Painel de Ajustes (Sliders) */
   .adjust-controls {
-    display: none; /* Escondido até ter foto */
+    display: none; 
     flex-direction: column;
-    gap: 8px;
+    gap: 15px;
     width: 100%;
-    background: #eee;
+    background: #f4f4f4;
     padding: 15px;
     border: 2px solid #000;
     box-sizing: border-box;
+    text-align: left;
   }
   
-  .adjust-controls label {
+  .adjust-controls p {
+      text-align: center;
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      text-decoration: underline;
+  }
+
+  .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+  }
+
+  .slider-group label {
+      font-size: 14px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      font-size: 14px;
   }
   
   input[type=range] {
-      width: 60%;
+      width: 100%;
       accent-color: #000;
+      cursor: pointer;
+      height: 5px;
+      background: #ddd;
+      outline: none;
   }
 
   .custom-file-upload { background: #fff; color: #000; }
@@ -136,32 +155,51 @@
 
   <h1>faça o upload da sua foto e participe do keyboard challenge</h1>
 
-  <button id="btnStart" class="btn-estilo" onclick="iniciarExperiencia()">▶ CLIQUE PARA INICIAR</button>
+  <!-- Botão de Início -->
+  <button id="btnStart" class="btn-estilo" onclick="iniciarExperiencia()">clique para iniciar</button>
 
   <div class="canvas-container">
     <canvas id="canvasOutput"></canvas>
   </div>
 
   <div class="controls-area" id="controlsArea">
+    <!-- Botão de Upload -->
     <div>
         <label for="uploadFoto" class="btn-estilo custom-file-upload">
-        📁 Escolher Foto
+        fazer upload da foto
         </label>
         <input type="file" id="uploadFoto" accept="image/*">
     </div>
 
+    <!-- NOVOS CONTROLES DE AJUSTE -->
     <div class="adjust-controls" id="adjustControls">
-        <p style="margin: 0 0 10px 0; font-size: 14px; text-decoration: underline;">Ajustar Posição da Foto:</p>
-        <label>🔍 Zoom: <input type="range" id="scaleSlider" min="0.1" max="3" step="0.1" value="1"></label>
-        <label>↔️ Mover X: <input type="range" id="posXSlider" min="-400" max="400" step="5" value="0"></label>
-        <label>↕️ Mover Y: <input type="range" id="posYSlider" min="-400" max="400" step="5" value="0"></label>
+        <p>ajustar posição da foto</p>
+        
+        <div class="slider-group">
+            <label>tamanho</label>
+            <!-- Permite ficar bem pequeno (0.05) até grande (4x) -->
+            <input type="range" id="scaleSlider" min="0.05" max="4" step="0.05" value="1">
+        </div>
+
+        <div class="slider-group">
+            <label>esquerda / direita</label>
+            <!-- Range gigante de -1000 a +1000 -->
+            <input type="range" id="posXSlider" min="-1000" max="1000" step="5" value="0">
+        </div>
+
+        <div class="slider-group">
+            <label>cima / baixo</label>
+            <!-- Range gigante de -1000 a +1000 -->
+            <input type="range" id="posYSlider" min="-1000" max="1000" step="5" value="0">
+        </div>
     </div>
     
+    <!-- Botão de Download -->
     <button id="btnDownload" class="btn-estilo" disabled>
-      ⬇️ GRAVAR E BAIXAR CLIPE (5s)
+      gravar e baixar clipe (5s)
     </button>
 
-    <p style="font-size: 11px; margin-top:0;">(Escolha a foto para liberar os ajustes e download)</p>
+    <p style="font-size: 11px; margin-top:0;">(escolha a foto para liberar os ajustes e download)</p>
   </div>
 
   <a href="https://t.me/hermezlately" target="_blank" class="telegram-link">
@@ -172,6 +210,7 @@
     reunification media 2025. all rights reserved
   </div>
 
+  <!-- VÍDEO LOCAL -->
   <video id="videoSource" src="video.mp4" loop playsinline crossorigin="anonymous"></video>
 
 <script>
@@ -184,19 +223,17 @@
   const adjustControls = document.getElementById('adjustControls');
   const btnDownload = document.getElementById('btnDownload');
 
-  // Sliders
   const scaleSlider = document.getElementById('scaleSlider');
   const posXSlider = document.getElementById('posXSlider');
   const posYSlider = document.getElementById('posYSlider');
   
-  // Canvas temporário
   const tempCanvas = document.createElement('canvas');
   const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
   
   let userImage = new Image();
   let hasPhoto = false;
   let isPlaying = false;
-  // Variáveis para controlar a posição e zoom da foto
+  
   let photoScale = 1;
   let photoX = 0;
   let photoY = 0;
@@ -216,7 +253,7 @@
       loopProcessamento();
     }).catch(error => {
       console.error(error);
-      alert("Erro ao iniciar vídeo.");
+      alert("Erro ao iniciar. Verifique se o arquivo 'video.mp4' está na pasta.");
     });
   }
 
@@ -229,7 +266,6 @@
     }
   }
 
-  // --- Eventos dos Sliders ---
   scaleSlider.oninput = function() { photoScale = parseFloat(this.value); }
   posXSlider.oninput = function() { photoX = parseInt(this.value); }
   posYSlider.oninput = function() { photoY = parseInt(this.value); }
@@ -243,34 +279,27 @@
           userImage.onload = function() {
               hasPhoto = true;
               btnDownload.disabled = false;
-              adjustControls.style.display = 'flex'; // Mostra os controles de ajuste
+              adjustControls.style.display = 'flex'; 
           }
         }
         reader.readAsDataURL(file);
     }
   });
 
-  // --- LÓGICA DO CHROMA KEY + AJUSTE DE POSIÇÃO ---
   function loopProcessamento() {
     if (!isPlaying) return;
+    
     if (video.paused && !video.ended) video.play();
     if (canvas.width === 0) ajustarTamanhoCanvas();
 
-    // 1. Limpa o canvas principal
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 2. Se tiver foto, desenha ela no fundo COM OS AJUSTES DOS SLIDERS
     if (hasPhoto) {
-        // Calcula a nova largura e altura baseada no zoom (scale)
         let scaledWidth = userImage.width * photoScale;
         let scaledHeight = userImage.height * photoScale;
-        
-        // Para centralizar o ponto de zoom, precisamos de um cálculo extra,
-        // mas vamos manter simples: desenha na posição X,Y com o novo tamanho.
         ctx.drawImage(userImage, photoX, photoY, scaledWidth, scaledHeight);
     }
 
-    // 3. Processa o vídeo no canvas temporário (igual antes)
     tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
     let frame = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
     let l = frame.data.length / 4;
@@ -280,24 +309,23 @@
       let g = frame.data[i * 4 + 1];
       let b = frame.data[i * 4 + 2];
 
+      // Lógica do Chroma Key (Verde)
       if (g > 90 && g > r * 1.4 && g > b * 1.4) {
         frame.data[i * 4 + 3] = 0; 
       }
     }
     tempCtx.putImageData(frame, 0, 0);
 
-    // 4. Desenha o vídeo processado por cima
     ctx.drawImage(tempCanvas, 0, 0);
 
     requestAnimationFrame(loopProcessamento);
   }
 
-  // --- LÓGICA DO DOWNLOAD (Igual antes) ---
   btnDownload.addEventListener('click', function() {
       if(isRecording) return;
       isRecording = true;
       btnDownload.disabled = true;
-      btnDownload.textContent = "Aguarde...";
+      btnDownload.textContent = "gravando... (aguarde 5s)";
       
       recordedChunks = [];
       const stream = canvas.captureStream(30);
@@ -330,7 +358,7 @@
         a.click();
         window.URL.revokeObjectURL(url);
         
-        btnDownload.textContent = "BAIXAR";
+        btnDownload.textContent = "gravar e baixar clipe (5s)";
         btnDownload.disabled = false;
         isRecording = false;
       };
