@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Keyboard Challenge</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
+
+<style>
+  body {
+    background-color: #ffffff; /* Fundo Branco */
+    color: #000000; /* Letra Preta */
+    font-family: 'Special Elite', cursive; /* Fonte Estilosa */
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    max-width: 600px;
+    line-height: 1.4;
+  }
+
+  .upload-btn-wrapper {
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+    margin-bottom: 15px;
+  }
+
+  /* Estilo do botão de upload */
+  .btn {
+    border: 2px solid #000;
+    color: #000;
+    background-color: white;
+    padding: 8px 20px;
+    font-family: 'Special Elite', cursive;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .btn:hover {
+    background-color: #000;
+    color: #fff;
+  }
+
+  .upload-btn-wrapper input[type=file] {
+    font-size: 100px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  canvas {
+    border: 3px solid #000;
+    max-width: 100%;
+    background-color: #eee;
+    display: block;
+    margin: 10px auto;
+    box-shadow: 5px 5px 0px #000; 
+  }
+
+  .telegram-link {
+    margin-top: 20px;
+    font-size: 18px;
+    text-decoration: none;
+    color: #000;
+    border-bottom: 1px dashed #000;
+    padding-bottom: 2px;
+  }
+  
+  .telegram-link:hover {
+    background-color: #000;
+    color: #fff;
+  }
+
+  /* Estilo do rodapé */
+  .footer-copy {
+    margin-top: 30px;
+    font-size: 12px; /* Fonte pequena */
+    opacity: 0.8;
+    font-weight: normal; /* Sem negrito */
+  }
+
+  #videoSource { display: none; }
+</style>
+</head>
+<body>
+
+  <h1>faça o upload da sua foto e participe do keyboard challenge</h1>
+
+  <div class="upload-btn-wrapper">
+    <button class="btn">1. ESCOLHER FOTO</button>
+    <input type="file" id="uploadFoto" accept="image/*">
+  </div>
+
+  <button class="btn" onclick="playVideo()" id="btnPlay" style="display:none;">2. GERAR VÍDEO ▶</button>
+
+  <canvas id="canvasOutput"></canvas>
+
+  <a href="https://t.me/hermezlately" target="_blank" class="telegram-link">
+    t.me/hermezlately
+  </a>
+
+  <div class="footer-copy">
+    reunification media 2025. all rights reserved
+  </div>
+
+  <video id="videoSource" src="video.mp4" loop playsinline></video>
+
+<script>
+  const video = document.getElementById('videoSource');
+  const canvas = document.getElementById('canvasOutput');
+  const ctx = canvas.getContext('2d');
+  const upload = document.getElementById('uploadFoto');
+  const btnPlay = document.getElementById('btnPlay');
+  
+  let userImage = new Image();
+  let imageLoaded = false;
+
+  // Tamanho inicial padrão
+  canvas.width = 640; 
+  canvas.height = 360;
+
+  ctx.font = "20px 'Special Elite'";
+  ctx.fillStyle = "black";
+  ctx.textAlign = "center";
+  ctx.fillText("Aguardando foto...", canvas.width/2, canvas.height/2);
+
+  upload.addEventListener('change', function(e) {
+    if(e.target.files && e.target.files[0]){
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = function(event) {
+        userImage.src = event.target.result;
+        userImage.onload = function() {
+            imageLoaded = true;
+            btnPlay.style.display = "inline-block"; 
+            alert("Foto carregada! Agora clica em GERAR VÍDEO.");
+        }
+        }
+        reader.readAsDataURL(file);
+    }
+  });
+
+  function playVideo() {
+    if (!imageLoaded) return;
+    video.play();
+    requestAnimationFrame(processarChromaKey);
+  }
+
+  function processarChromaKey() {
+    if (video.paused || video.ended) return;
+
+    if (canvas.width !== video.videoWidth) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
+
+    ctx.drawImage(userImage, 0, 0, canvas.width, canvas.height);
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    tempCtx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    let frame = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+    let l = frame.data.length / 4;
+
+    for (let i = 0; i < l; i++) {
+      let r = frame.data[i * 4 + 0];
+      let g = frame.data[i * 4 + 1];
+      let b = frame.data[i * 4 + 2];
+
+      if (g > 90 && g > r * 1.4 && g > b * 1.4) {
+        frame.data[i * 4 + 3] = 0; 
+      }
+    }
+    
+    ctx.putImageData(frame, 0, 0);
+
+    requestAnimationFrame(processarChromaKey);
+  }
+</script>
+
+</body>
+</html>
