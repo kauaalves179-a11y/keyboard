@@ -183,13 +183,13 @@
 
         <div class="slider-group">
             <label>esquerda / direita</label>
-            <!-- Range gigante de -1000 a +1000 -->
+            <!-- Range gigante -->
             <input type="range" id="posXSlider" min="-1000" max="1000" step="5" value="0">
         </div>
 
         <div class="slider-group">
             <label>cima / baixo</label>
-            <!-- Range gigante de -1000 a +1000 -->
+            <!-- Range gigante -->
             <input type="range" id="posYSlider" min="-1000" max="1000" step="5" value="0">
         </div>
     </div>
@@ -234,6 +234,7 @@
   let hasPhoto = false;
   let isPlaying = false;
   
+  // Valores iniciais (serão sobrescritos ao carregar foto)
   let photoScale = 1;
   let photoX = 0;
   let photoY = 0;
@@ -279,7 +280,27 @@
           userImage.onload = function() {
               hasPhoto = true;
               btnDownload.disabled = false;
-              adjustControls.style.display = 'flex'; 
+              adjustControls.style.display = 'flex';
+              
+              // --- AUTO-POSICIONAMENTO ---
+              // Aqui definimos onde a foto começa
+              
+              // X = 0 (Totalmente na esquerda)
+              photoX = 0; 
+              
+              // Y = Tenta jogar para baixo (aprox. 60% da altura do canvas se disponível)
+              // Se o canvas já tiver altura, usa ela. Senão, chuta 250px pra baixo.
+              if (canvas.height > 0) {
+                  photoY = Math.floor(canvas.height * 0.6) - (userImage.height * 0.2); 
+              } else {
+                  photoY = 250;
+              }
+
+              // Atualiza os sliders visuais para bater com a posição real
+              posXSlider.value = photoX;
+              posYSlider.value = photoY;
+              scaleSlider.value = 1;
+              photoScale = 1;
           }
         }
         reader.readAsDataURL(file);
